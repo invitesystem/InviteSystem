@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InviteSystem</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+        }
+
+        :root {
+            --blur: 20px;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.18);
+            --accent: #007AFF;
+            --accent-glow: rgba(0, 122, 255, 0.5);
+            --success: #34C759;
+            --success-glow: rgba(52, 199, 89, 0.6);
+            --danger: #FF3B30;
+            --danger-glow: rgba(255, 59, 48, 0.6);
+            --warning: #FF9500;
+            --warning-glow: rgba(255, 149, 0, 0.6);
+            --purple: #AF52DE;
+            --purple-glow: rgba(175, 82, 222, 0.6);
+            --text: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(0, 122, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+            animation: bgMove 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes bgMove {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-5%, -5%) rotate(5deg); }
+            50% { transform: translate(5%, 5%) rotate(-5deg); }
+            75% { transform: translate(-3%, 3%) rotate(3deg); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            perspective: 1000px;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur));
+            -webkit-backdrop-filter: blur(var(--blur));
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                0 0 80px rgba(0, 122, 255, 0.1);
+            transform-style: preserve-3d;
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: cardAppear 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes cardAppear {
+            from {
+                opacity: 0;
+                transform: translateY(40px) rotateX(10deg);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) rotateX(0);
+            }
+        }
+
+        .glass-card:hover {
+            box-shadow: 
+                0 16px 48px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15),
+                0 0 120px rgba(0, 122, 255, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo h1 {
+            font-size: clamp(24px, 6vw, 32px);
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 50%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 40px rgba(129, 140, 248, 0.5);
+        }
+
+        .logo p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 28px;
+            position: relative;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tab.active {
+            color: var(--text);
+        }
+
+        .tab-indicator {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .tabs[data-active="register"] .tab-indicator {
+            transform: translateX(100%);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
+        }
+
+        .form-group:focus-within label {
+            color: var(--accent);
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .input-wrapper input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15), 0 0 20px rgba(0, 122, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .input-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.2) 0%, rgba(147, 51, 234, 0.2) 100%);
+            filter: blur(20px);
+        }
+
+        .input-wrapper input:focus + .input-glow {
+            opacity: 1;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, #5856d6 100%);
+            color: white;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--accent-glow);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-purple {
+            background: linear-gradient(135deg, var(--purple) 0%, #8b5cf6 100%);
+            color: white;
+            box-shadow: 0 4px 15px var(--purple-glow);
+        }
+
+        .btn-purple:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--purple-glow);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .form-section {
+            display: none;
+            animation: fadeSlide 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+            animation: fadeSlide 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent) 0%, #5856d6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .avatar.dev {
+            background: linear-gradient(135deg, var(--purple) 0%, #ec4899 100%);
+            box-shadow: 0 4px 15px var(--purple-glow);
+        }
+
+        .user-name {
+            color: var(--text);
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .user-role {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .user-role.dev {
+            color: var(--purple);
+        }
+
+        .logout-btn {
+            padding: 10px 16px;
+            background: rgba(255, 59, 48, 0.15);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            border-radius: 10px;
+            color: var(--danger);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 59, 48, 0.25);
+            box-shadow: 0 0 20px var(--danger-glow);
+        }
+
+        .status-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .status-dot.active {
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success-glow);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.inactive {
+            background: var(--danger);
+            box-shadow: 0 0 10px var(--danger-glow);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+
+        .status-text {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .status-text.active {
+            color: var(--success);
+        }
+
+        .status-text.inactive {
+            color: var(--danger);
+        }
+
+        .status-details {
+            display: grid;
+            gap: 12px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-label {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .status-value {
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .activate-section {
+            margin-top: 24px;
+        }
+
+        .activate-section h3 {
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .dev-access-btn {
+            margin-top: 20px;
+            padding: 14px;
+            background: rgba(175, 82, 222, 0.1);
+            border: 1px solid rgba(175, 82, 222, 0.3);
+            border-radius: 12px;
+            color: var(--purple);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .dev-access-btn:hover {
+            background: rgba(175, 82, 222, 0.2);
+            box-shadow: 0 0 25px var(--purple-glow);
+        }
+
+        .dev-access-btn.visible {
+            display: block;
+        }
+
+        .dev-panel {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(175, 82, 222, 0.3);
+            display: none;
+        }
+
+        .dev-panel.active {
+            display: block;
+            animation: fadeSlide 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .dev-panel h3 {
+            color: var(--purple);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dev-panel h3::before {
+            content: '⚡';
+        }
+
+        .dev-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(175, 82, 222, 0.2);
+            border: 1px solid rgba(175, 82, 222, 0.3);
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--purple);
+            margin-left: 8px;
+        }
+
+        .dev-badge::before {
+            content: '🔓';
+            font-size: 10px;
+        }
+
+        .time-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .preset-btn {
+            padding: 10px 8px;
+            background: rgba(175, 82, 222, 0.1);
+            border: 1px solid rgba(175, 82, 222, 0.2);
+            border-radius: 8px;
+            color: var(--purple);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .preset-btn:hover {
+            background: rgba(175, 82, 222, 0.2);
+            box-shadow: 0 0 15px var(--purple-glow);
+        }
+
+        .generated-key {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid rgba(52, 199, 89, 0.2);
+            border-radius: 12px;
+            display: none;
+        }
+
+        .generated-key.active {
+            display: block;
+            animation: fadeSlide 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .generated-key p {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .key-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .key-value code {
+            flex: 1;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            color: var(--success);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            padding: 12px;
+            background: rgba(52, 199, 89, 0.2);
+            border: none;
+            border-radius: 8px;
+            color: var(--success);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: rgba(52, 199, 89, 0.3);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--glass-bg);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 32px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 100px var(--purple-glow);
+            animation: modalSlide 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--purple) 0%, #ec4899 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 30px var(--purple-glow);
+        }
+
+        .modal-header h2 {
+            color: var(--text);
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            font-size: 14px;
+            font-weight: 500;
+            transform: translateX(calc(100% + 40px));
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            z-index: 1001;
+            max-width: 90vw;
+        }
+
+        .notification.active {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: rgba(52, 199, 89, 0.2);
+            border: 1px solid rgba(52, 199, 89, 0.3);
+            color: var(--success);
+            box-shadow: 0 4px 20px var(--success-glow);
+        }
+
+        .notification.error {
+            background: rgba(255, 59, 48, 0.2);
+            border: 1px solid rgba(255, 59, 48, 0.3);
+            color: var(--danger);
+            box-shadow: 0 4px 20px var(--danger-glow);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .input-wrapper.purple input:focus {
+            border-color: var(--purple);
+            box-shadow: 0 0 0 4px rgba(175, 82, 222, 0.15), 0 0 20px rgba(175, 82, 222, 0.2);
+        }
+
+        @media (max-width: 480px) {
+            .glass-card {
+                padding: 28px 20px;
+            }
+
+            .time-presets {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .user-header {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+
+            .user-info {
+                flex-direction: column;
+            }
+
+            .modal {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification"></div>
+    <div class="loading-overlay" id="loading">
+        <div class="loader"></div>
+    </div>
+
+    <div class="modal-overlay" id="devKeyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-icon">🔐</div>
+                <h2>Доступ разработчика</h2>
+                <p>Введите секретный ключ для доступа к панели управления</p>
+            </div>
+            <div class="form-group">
+                <div class="input-wrapper purple">
+                    <input type="password" id="devKeyInput" placeholder="Секретный ключ">
+                    <div class="input-glow"></div>
+                </div>
+            </div>
+            <button class="btn btn-purple" id="devKeySubmit">Подтвердить</button>
+            <button class="btn" id="devKeyCancel" style="margin-top: 12px; background: rgba(255,255,255,0.1); color: var(--text-secondary);">Отмена</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="glass-card">
+            <div class="logo">
+                <h1>InviteSystem</h1>
+                <p>Система управления доступом</p>
+            </div>
+
+            <div id="authSection">
+                <div class="tabs" data-active="login">
+                    <div class="tab-indicator"></div>
+                    <div class="tab active" data-tab="login">Вход</div>
+                    <div class="tab" data-tab="register">Регистрация</div>
+                </div>
+
+                <div class="form-section active" id="loginForm">
+                    <div class="form-group">
+                        <label>Имя пользователя</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="loginUsername" placeholder="Введите имя">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Пароль</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="loginPassword" placeholder="Введите пароль">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="loginBtn">Войти</button>
+                </div>
+
+                <div class="form-section" id="registerForm">
+                    <div class="form-group">
+                        <label>Имя пользователя</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="regUsername" placeholder="Придумайте имя">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Пароль</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="regPassword" placeholder="Придумайте пароль">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Подтвердите пароль</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="regPasswordConfirm" placeholder="Повторите пароль">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="registerBtn">Создать аккаунт</button>
+                </div>
+            </div>
+
+            <div class="dashboard" id="dashboard">
+                <div class="user-header">
+                    <div class="user-info">
+                        <div class="avatar" id="userAvatar">D</div>
+                        <div>
+                            <div class="user-name" id="userName">Developer</div>
+                            <div class="user-role" id="userRole">Пользователь</div>
+                        </div>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn">Выйти</button>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-header">
+                        <div class="status-dot inactive" id="statusDot"></div>
+                        <span class="status-text inactive" id="statusText">Ключ не активирован</span>
+                    </div>
+                    <div class="status-details" id="statusDetails">
+                        <div class="status-row">
+                            <span class="status-label">UID</span>
+                            <span class="status-value" id="keyUid">—</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-label">Истекает</span>
+                            <span class="status-value" id="keyExpires">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="activate-section">
+                    <h3>Активировать ключ</h3>
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <input type="text" id="activateKeyInput" placeholder="Введите ключ активации">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="activateBtn">Активировать</button>
+                </div>
+
+                <button class="dev-access-btn" id="devAccessBtn">
+                    🔐 Открыть панель разработчика
+                </button>
+
+                <div class="dev-panel" id="devPanel">
+                    <h3>Панель разработчика <span class="dev-badge">Доступ подтверждён</span></h3>
+                    <div class="time-presets">
+                        <button class="preset-btn" data-time="1h">1 час</button>
+                        <button class="preset-btn" data-time="1d">1 день</button>
+                        <button class="preset-btn" data-time="1w">1 неделя</button>
+                        <button class="preset-btn" data-time="1mon">1 месяц</button>
+                        <button class="preset-btn" data-time="3mon">3 месяца</button>
+                        <button class="preset-btn" data-time="6mon">6 месяцев</button>
+                        <button class="preset-btn" data-time="1y">1 год</button>
+                        <button class="preset-btn" data-time="40y">40 лет</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Или введите вручную</label>
+                        <div class="input-wrapper purple">
+                            <input type="text" id="customTimeInput" placeholder="Например: 1мес, 30д, 2нед, 5ч">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-purple" id="generateKeyBtn">Сгенерировать ключ</button>
+                    <div class="generated-key" id="generatedKeySection">
+                        <p>Сгенерированный ключ:</p>
+                        <div class="key-value">
+                            <code id="generatedKeyValue"></code>
+                            <button class="copy-btn" id="copyKeyBtn">📋</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
